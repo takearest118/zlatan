@@ -9,7 +9,11 @@ import requests
 
 D_LIST = ('messi', 'ronaldo', 'kangte', 'hwang', 'son')
 
-SLACK_CHANNEL_URL = 'https://hooks.slack.com/services/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'
+SLACK_CHANNEL_URL = 'https://hooks.slack.com/services/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'
+
+
+def get_random_device():
+    return D_LIST[random.randrange(len(D_LIST))]
 
 
 class Singleton(type):
@@ -34,6 +38,25 @@ class MapService(metaclass=Singleton):
         return self.__map
 
 
+class Session(metaclass=Singleton):
+
+    def __init__(self, *args, **kwargs):
+        print('init Session')
+        self.__list = list()
+
+    def add(self, session):
+        self.__list.append(session)
+
+    def get_session_list(self):
+        return self.__list
+
+    def remove(self, session):
+        self.__list.remove(session)
+
+    def clear(self):
+        self.__list.clear()
+
+
 class SlackService(metaclass=Singleton):
 
     def __init__(self, *args, **kwargs):
@@ -50,8 +73,7 @@ class SlackService(metaclass=Singleton):
         return requests.post(self.__url, json=data)
 
 
-
-class MyTCPSocketHandler(socketserver.BaseRequestHandler):
+class TCPSocketHandler(socketserver.BaseRequestHandler):
     """
     The RequestHandler class for our server.
 
@@ -61,18 +83,42 @@ class MyTCPSocketHandler(socketserver.BaseRequestHandler):
     """
 
     def handle(self):
-        # self.request is the TCP socket connected to the client
-        self.data = self.request.recv(1024).strip()
-        print("{} {} wrote: {}".format(datetime.utcnow(), self.client_address[0], self.data))
-        k, v = str(self.data, 'utf-8').split(',', 1)
-        MapService().set_device_id(k, v)
-        print(self.client_address)
-        print(dir(self.server))
-        MapService().set_device_id(D_LIST[random.randrange(len(D_LIST))], '{},{},{}'.format(random.randint(0, 255), random.randint(0, 255), 0))
-        print(MapService().get_map())
-        SlackService().message(str(MapService().get_map()))
-        # just send back the same data, but upper-cased
-        self.request.sendall(self.data.upper())
+        if self.request not in Session().get_session_list():
+            Session().add(self.request)
+            print('connected {}'.format(self.client_address[0]))
+        while True:
+            # self.request is the TCP socket connected to the client
+            self.data = self.request.recv(1024).strip()
+            print("{} {} wrote: {}".format(datetime.utcnow(), self.client_address[0], self.data))
+            if str(self.data, 'utf-8') == ':/quit':
+                Session().remove(self.request)
+                self.request.send(bytes('disconnected', 'utf-8'))
+                print('{} was gone'.format(self.client_address[0]))
+                break
+            elif str(self.data, 'utf-8') == ':/map':
+                MapService().set_device_id(get_random_device(), '{},{},{},{}'.format(random.randint(0, 5000), random.randint(0, 5000), 0, random.randint(0, 100)))
+                self.request.send(bytes(str(MapService().get_map()), 'utf-8'))
+                print('{} request map'.format(self.client_address[0]))
+            elif str(self.data, 'utf-8').startswith(':/device'):
+                k, v = str(self.data, 'utf-8').split('/')[2].split(',', 1)
+                MapService().set_device_id(k, v)
+                MapService().set_device_id(get_random_device(), '{},{},{},{}'.format(random.randint(0, 5000), random.randint(0, 5000), 0, random.randint(0, 100)))
+                print(MapService().get_map())
+                print(Session().get_session_list())
+                #SlackService().message(str(MapService().get_map()))
+                #SlackService().message(str(Session().get_session_list()))
+                # just send back the same data, but upper-cased
+                self.request.sendall(self.data.upper())
+            else:
+                Session().remove(self.request)
+                self.request.send(bytes('error', 'utf-8'))
+                print('{} wrong command'.format(self.client_address[0]))
+                break
+                
+
+
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    pass
 
 
 if __name__ == "__main__":
@@ -82,9 +128,13 @@ if __name__ == "__main__":
     MapService()
     SlackService()
 
+    Session()
+
     # instantiate the server, and bind to localhost on port 8888
-    with socketserver.TCPServer((HOST, PORT), MyTCPSocketHandler) as server:
+    with ThreadedTCPServer((HOST, PORT), TCPSocketHandler) as server:
         # activate the server
         # this will keep running until Ctrl-C
         server.serve_forever()
+        server.shutdown()
+        server.server_close()
 
