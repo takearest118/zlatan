@@ -6,6 +6,8 @@ import random
 import socketserver
 import requests
 
+import threading
+
 
 D_LIST = ('messi', 'ronaldo', 'kangte', 'hwang', 'son')
 
@@ -32,9 +34,11 @@ class MapService(metaclass=Singleton):
     def __init__(self, *args, **kwargs):
         print('init MapService')
         self.__map = dict()
+        self.__lock = threading.Lock()
 
     def set_device_id(self, _id, value):
-        self.__map.update({_id: value})
+        with self.__lock:
+            self.__map.update({_id: value})
 
     def get_map(self):
         return self.__map
