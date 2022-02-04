@@ -15,6 +15,23 @@ SLACK_CHANNEL_URL = 'https://hooks.slack.com/services/TAX82AY79/B01DCF0SRK6/AB63
 
 ENCODING = 'utf-8'
 
+# uwb standard
+# x,y flat & z height
+ARENA_SIZE_X = 15000
+ARENA_SIZE_Y = 15000
+ARENA_SIZE_Z = 100
+
+# 'cm' / uwb
+SCALE_RATIO = 2000 / 15000
+
+# statics
+COORD_X_MIN = 0
+COORD_X_MAX = ARENA_SIZE_X
+COORD_Y_MIN = 0
+COORD_Y_MAX = ARENA_SIZE_Y
+COORD_Z_MIN = 0
+COORD_Z_MAX = ARENA_SIZE_Z
+
 
 def get_random_device():
     return D_LIST[random.randrange(len(D_LIST))]
@@ -115,6 +132,17 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
                 #SlackService().message(str(Session().get_session_list()))
                 # just send back the same data, but upper-cased
                 self.request.sendall(self.data.upper())
+            elif str(self.data, ENCODING) == ':/info':
+                self.request.send(bytes(
+                    "{},{},{},{},{},{},{}".format(
+                        COORD_X_MIN,
+                        COORD_X_MAX,
+                        COORD_Y_MIN,
+                        COORD_Y_MAX,
+                        COORD_Z_MIN,
+                        COORD_Z_MAX,
+                        SCALE_RATIO),
+                    ENCODING))
             else:
                 Session().remove(self.request)
                 self.request.send(bytes('error', ENCODING))
