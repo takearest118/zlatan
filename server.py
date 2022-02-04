@@ -34,6 +34,10 @@ COORD_Y_MAX = ARENA_SIZE_Y
 COORD_Z_MIN = 0
 COORD_Z_MAX = ARENA_SIZE_Z
 
+# position quality factor
+PQF_MIN = 0
+PQF_MAX = 100
+
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s\t%(levelname)s:\t%(message)s')
 socketserver.TCPServer.allow_reuse_address = True
@@ -134,13 +138,13 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
                 self.__logger.info('{} was gone'.format(self.client_address[0]))
                 break
             elif str(self.data, ENCODING) == ':/map':
-                # MapService().set_device_id(get_random_device(), '{},{},{},{}'.format(random.randint(0, 5000), random.randint(0, 5000), 0, random.randint(0, 100)))
+                MapService().set_device_id(get_random_device(), '{},{},{},{}'.format(random.randint(COORD_X_MIN, COORD_X_MAX), random.randint(COORD_Y_MIN, COORD_Y_MAX), random.randint(COORD_Z_MIN, COORD_Z_MAX), random.randint(PQF_MIN, PQF_MAX)))
                 self.request.send(bytes(str(MapService().get_map()), ENCODING))
                 self.__logger.debug('{} request map'.format(self.client_address[0]))
             elif str(self.data, ENCODING).startswith(':/device'):
                 k, v = str(self.data, ENCODING).split('/')[2].split(',', 1)
                 MapService().set_device_id(k, v)
-                # MapService().set_device_id(get_random_device(), '{},{},{},{}'.format(random.randint(0, 5000), random.randint(0, 5000), 0, random.randint(0, 100)))
+                self.request.send(bytes(str(MapService().get_map()), ENCODING))
                 self.__logger.debug(MapService().get_map())
                 self.__logger.debug(Session().get_session_list())
                 #SlackService().message(str(MapService().get_map()))
