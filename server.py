@@ -8,6 +8,8 @@ import requests
 
 import threading
 
+import logging
+
 
 D_LIST = ('messi', 'ronaldo', 'kangte', 'hwang', 'son')
 
@@ -33,6 +35,9 @@ COORD_Z_MIN = 0
 COORD_Z_MAX = ARENA_SIZE_Z
 
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s\t%(levelname)s:\t%(message)s')
+
+
 def get_random_device():
     return D_LIST[random.randrange(len(D_LIST))]
 
@@ -49,7 +54,8 @@ class Singleton(type):
 class MapService(metaclass=Singleton):
 
     def __init__(self, *args, **kwargs):
-        print('init MapService')
+        self.__logger = logging.getLogger('MapService')
+        self.__logger.info('init MapService')
         self.__map = dict()
         self.__lock = threading.Lock()
 
@@ -64,7 +70,8 @@ class MapService(metaclass=Singleton):
 class Session(metaclass=Singleton):
 
     def __init__(self, *args, **kwargs):
-        print('init Session')
+        self.__logger = logging.getLogger('Session  ')
+        self.__logger.info('init Session')
         self.__list = list()
 
     def add(self, session):
@@ -83,7 +90,8 @@ class Session(metaclass=Singleton):
 class SlackService(metaclass=Singleton):
 
     def __init__(self, *args, **kwargs):
-        print('init SlackService')
+        self.__logger = logging.getLogger('SlackService')
+        self.__logger.info('init SlackService')
         self.__url = SLACK_CHANNEL_URL
 
     def message(self, msg):
@@ -105,29 +113,34 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
     client.
     """
 
+    def __init__(self, *args, **kwargs):
+        self.__logger = logging.getLogger('TCPHandler')
+        socketserver.BaseRequestHandler.__init__(self, *args, **kwargs)
+
+
     def handle(self):
         if self.request not in Session().get_session_list():
             Session().add(self.request)
-            print('connected {}'.format(self.client_address[0]))
+            self.__logger.info('connected {}'.format(self.client_address[0]))
         while True:
             # self.request is the TCP socket connected to the client
             self.data = self.request.recv(1024).strip()
-            print("{} {} wrote: {}".format(datetime.utcnow(), self.client_address[0], self.data))
+            self.__logger.info("{} {} wrote: {}".format(datetime.utcnow(), self.client_address[0], self.data))
             if str(self.data, ENCODING) == ':/quit':
                 Session().remove(self.request)
                 self.request.send(bytes('disconnected', ENCODING))
-                print('{} was gone'.format(self.client_address[0]))
+                self.__logger.info('{} was gone'.format(self.client_address[0]))
                 break
             elif str(self.data, ENCODING) == ':/map':
                 MapService().set_device_id(get_random_device(), '{},{},{},{}'.format(random.randint(0, 5000), random.randint(0, 5000), 0, random.randint(0, 100)))
                 self.request.send(bytes(str(MapService().get_map()), ENCODING))
-                print('{} request map'.format(self.client_address[0]))
+                self.__logger.debug('{} request map'.format(self.client_address[0]))
             elif str(self.data, ENCODING).startswith(':/device'):
                 k, v = str(self.data, ENCODING).split('/')[2].split(',', 1)
                 MapService().set_device_id(k, v)
                 MapService().set_device_id(get_random_device(), '{},{},{},{}'.format(random.randint(0, 5000), random.randint(0, 5000), 0, random.randint(0, 100)))
-                print(MapService().get_map())
-                print(Session().get_session_list())
+                self.__logger.debug(MapService().get_map())
+                self.__logger.debug(Session().get_session_list())
                 #SlackService().message(str(MapService().get_map()))
                 #SlackService().message(str(Session().get_session_list()))
                 # just send back the same data, but upper-cased
@@ -146,7 +159,7 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
             else:
                 Session().remove(self.request)
                 self.request.send(bytes('error', ENCODING))
-                print('{} wrong command'.format(self.client_address[0]))
+                self.__logger.debug('{} wrong command'.format(self.client_address[0]))
                 break
                 
 
