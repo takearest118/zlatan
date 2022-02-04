@@ -11,6 +11,8 @@ D_LIST = ('messi', 'ronaldo', 'kangte', 'hwang', 'son')
 
 SLACK_CHANNEL_URL = 'https://hooks.slack.com/services/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'
 
+ENCODING = 'utf-8'
+
 
 def get_random_device():
     return D_LIST[random.randrange(len(D_LIST))]
@@ -90,17 +92,17 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
             # self.request is the TCP socket connected to the client
             self.data = self.request.recv(1024).strip()
             print("{} {} wrote: {}".format(datetime.utcnow(), self.client_address[0], self.data))
-            if str(self.data, 'utf-8') == ':/quit':
+            if str(self.data, ENCODING) == ':/quit':
                 Session().remove(self.request)
-                self.request.send(bytes('disconnected', 'utf-8'))
+                self.request.send(bytes('disconnected', ENCODING))
                 print('{} was gone'.format(self.client_address[0]))
                 break
-            elif str(self.data, 'utf-8') == ':/map':
+            elif str(self.data, ENCODING) == ':/map':
                 MapService().set_device_id(get_random_device(), '{},{},{},{}'.format(random.randint(0, 5000), random.randint(0, 5000), 0, random.randint(0, 100)))
-                self.request.send(bytes(str(MapService().get_map()), 'utf-8'))
+                self.request.send(bytes(str(MapService().get_map()), ENCODING))
                 print('{} request map'.format(self.client_address[0]))
-            elif str(self.data, 'utf-8').startswith(':/device'):
-                k, v = str(self.data, 'utf-8').split('/')[2].split(',', 1)
+            elif str(self.data, ENCODING).startswith(':/device'):
+                k, v = str(self.data, ENCODING).split('/')[2].split(',', 1)
                 MapService().set_device_id(k, v)
                 MapService().set_device_id(get_random_device(), '{},{},{},{}'.format(random.randint(0, 5000), random.randint(0, 5000), 0, random.randint(0, 100)))
                 print(MapService().get_map())
@@ -111,7 +113,7 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
                 self.request.sendall(self.data.upper())
             else:
                 Session().remove(self.request)
-                self.request.send(bytes('error', 'utf-8'))
+                self.request.send(bytes('error', ENCODING))
                 print('{} wrong command'.format(self.client_address[0]))
                 break
                 
