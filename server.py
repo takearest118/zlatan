@@ -116,6 +116,7 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
 
     def __init__(self, *args, **kwargs):
         self.__logger = logging.getLogger('TCPHandler')
+        self.__logger.setLevel(logging.INFO)
         socketserver.BaseRequestHandler.__init__(self, *args, **kwargs)
 
 
@@ -126,7 +127,7 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
         while True:
             # self.request is the TCP socket connected to the client
             self.data = self.request.recv(1024).strip()
-            self.__logger.info("{} {} wrote: {}".format(datetime.utcnow(), self.client_address[0], self.data))
+            self.__logger.debug("{} {} wrote: {}".format(datetime.utcnow(), self.client_address[0], self.data))
             if str(self.data, ENCODING) == ':/quit':
                 Session().remove(self.request)
                 self.request.send(bytes('disconnected', ENCODING))
@@ -160,7 +161,7 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
             else:
                 Session().remove(self.request)
                 self.request.send(bytes('error', ENCODING))
-                self.__logger.debug('{} wrong command'.format(self.client_address[0]))
+                self.__logger.warning('{} wrong command'.format(self.client_address[0]))
                 break
                 
 
