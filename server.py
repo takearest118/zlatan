@@ -183,7 +183,9 @@ if __name__ == "__main__":
     with ThreadedTCPServer((HOST, PORT), TCPSocketHandler) as server:
         # activate the server
         # this will keep running until Ctrl-C
-        server.serve_forever()
-        server.shutdown()
-        server.server_close()
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            server.shutdown()
+            server.server_close()
 
