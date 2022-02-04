@@ -36,6 +36,7 @@ COORD_Z_MAX = ARENA_SIZE_Z
 
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s\t%(levelname)s:\t%(message)s')
+socketserver.TCPServer.allow_reuse_address = True
 
 
 def get_random_device():
