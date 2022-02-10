@@ -138,7 +138,7 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
                 self.__logger.info('{} was gone'.format(self.client_address[0]))
                 break
             elif str(self.data, ENCODING) == ':/map':
-                MapService().set_device_id(get_random_device(), '{},{},{},{}'.format(random.randint(COORD_X_MIN, COORD_X_MAX), random.randint(COORD_Y_MIN, COORD_Y_MAX), random.randint(COORD_Z_MIN, COORD_Z_MAX), random.randint(PQF_MIN, PQF_MAX)))
+                # MapService().set_device_id(get_random_device(), '{},{},{},{}'.format(random.randint(COORD_X_MIN, COORD_X_MAX), random.randint(COORD_Y_MIN, COORD_Y_MAX), random.randint(COORD_Z_MIN, COORD_Z_MAX), random.randint(PQF_MIN, PQF_MAX)))
                 self.request.send(bytes(str(MapService().get_map()), ENCODING))
                 self.__logger.debug('{} request map'.format(self.client_address[0]))
             elif str(self.data, ENCODING).startswith(':/device'):
