@@ -19,6 +19,9 @@ NPC_LIST = ('messi', 'ronaldo', 'kangte', 'hwang', 'son')
 ENCODING = 'utf-8'
 
 
+LOOP_INTERVAL_SEC = 0.01
+
+
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s\t%(levelname)s:\t%(message)s')
 
 
@@ -41,13 +44,17 @@ class Singleton(type):
 
 class Npc:
     def __init__(self, name):
+
         self.__name = 'npc_' + name
         self.__LOGGER = logging.getLogger("NPC-" + name)
         self.__LOGGER.setLevel(logging.INFO)
 
-        self.__LOOP_INTERVAL_SEC = 0.1
         self.__MOVE_INTERVAL_SEC = 2
         self.__SLEEP_SEC = 2
+
+        # cm
+        self.__SPEED_MAX = 300
+        self.__SPEED_MIN = 100
 
         self.__live = True
 
@@ -71,7 +78,9 @@ class Npc:
         self.__position_x = random.randint(self.__arena_x_min, self.__arena_x_max)
         self.__position_y = random.randint(self.__arena_y_min, self.__arena_y_max)
         self.__position_z = 0
-        self.__speed = random.randint(100, 300)
+        self.__speed = random.randint(
+                self.__SPEED_MIN * LOOP_INTERVAL_SEC * 10, 
+                self.__SPEED_MAX * LOOP_INTERVAL_SEC * 10)
 
         self.__rotation_z = random.randint(0, 360)
 
@@ -138,7 +147,7 @@ class Npc:
             if time.time() > (move_start_timestamp + self.__MOVE_INTERVAL_SEC):
                 break;
 
-            time.sleep(self.__LOOP_INTERVAL_SEC)
+            time.sleep(LOOP_INTERVAL_SEC)
 
 
     def close(self):
