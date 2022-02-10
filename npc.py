@@ -118,12 +118,20 @@ class Npc:
 
             if self.__position_x < self.__arena_x_min:
                 self.__position_x = self.__arena_x_min
+                self.__rotation_z = (540 - self.__rotation_z) % 360
+                radian = math.radians(self.__rotation_z)
             if self.__position_x > self.__arena_x_max:
                 self.__position_x = self.__arena_x_max
+                self.__rotation_z = (540 - self.__rotation_z) % 360
+                radian = math.radians(self.__rotation_z)
             if self.__position_y < self.__arena_y_min:
                 self.__position_y = self.__arena_y_min
+                self.__rotation_z = (360 - self.__rotation_z) % 360
+                radian = math.radians(self.__rotation_z)
             if self.__position_y > self.__arena_y_max:
                 self.__position_y = self.__arena_y_max
+                self.__rotation_z = (360 - self.__rotation_z) % 360
+                radian = math.radians(self.__rotation_z)
 
             self.send_position()
 
