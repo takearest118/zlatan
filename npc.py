@@ -10,7 +10,7 @@ import sys
 import signal
 
 
-DEFAULT_HOST = 'localhost'
+DEFAULT_HOST = '192.168.41.254'
 DEFAULT_PORT = 8888
 
 NPC_LIST = ('messi', 'ronaldo', 'kangte', 'hwang', 'son')

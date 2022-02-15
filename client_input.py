@@ -5,7 +5,7 @@ import sys
 
 
 #HOST, PORT = '35.180.40.190', 8888
-DEFAULT_HOST, DEFAULT_PORT = 'localhost', 8888
+DEFAULT_HOST, DEFAULT_PORT = '192.168.41.254', 8888
 host = DEFAULT_HOST
 port = DEFAULT_PORT
 if len(sys.argv) > 1:

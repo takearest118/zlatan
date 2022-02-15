@@ -3,8 +3,7 @@
 import socket
 import sys
 
-HOST, PORT = "35.180.40.190", 8888
-#HOST, PORT = "localhost", 8888
+HOST, PORT = "192.168.41.254", 8888
 data = " ".join(sys.argv[1:])
 
 # Create a socket (SOCK_STREAM means a TCP socket)
