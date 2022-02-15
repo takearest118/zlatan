@@ -10,6 +10,8 @@ import threading
 
 import logging
 
+import homography
+
 
 D_LIST = ('messi', 'ronaldo', 'kangte', 'hwang', 'son')
 
@@ -17,11 +19,11 @@ SLACK_CHANNEL_URL = 'https://hooks.slack.com/services/TAX82AY79/B01DCF0SRK6/AB63
 
 ENCODING = 'utf-8'
 
-# uwb standard
+# game plate standard
 # x,y flat & z height
-ARENA_SIZE_X = 15000
-ARENA_SIZE_Y = 15000
-ARENA_SIZE_Z = 100
+ARENA_SIZE_X = 1500
+ARENA_SIZE_Y = 2000
+ARENA_SIZE_Z = 300
 
 # 'cm' / uwb
 SCALE_RATIO = 2000 / 15000
@@ -42,9 +44,16 @@ PQF_MAX = 100
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s\t%(levelname)s:\t%(message)s')
 socketserver.TCPServer.allow_reuse_address = True
 
+h_matrix = object
 
 def get_random_device():
     return D_LIST[random.randrange(len(D_LIST))]
+
+
+class Point(object):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
 
 
 class Singleton(type):
@@ -143,6 +152,9 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
                 self.__logger.debug('{} request map'.format(self.client_address[0]))
             elif str(self.data, ENCODING).startswith(':/device'):
                 k, v = str(self.data, ENCODING).split('/')[2].split(',', 1)
+                split_coord = v.split(',')
+                split_coord[0], split_coord[1] = h_matrix([float(split_coord[0]), float(split_coord[1])])
+                v = str(int(split_coord[0])) + "," + str(int(split_coord[1])) + "," + split_coord[2] + "," + split_coord[3]
                 MapService().set_device_id(k, v)
                 self.request.send(bytes(str(MapService().get_map()), ENCODING))
                 self.__logger.debug(MapService().get_map())
@@ -183,6 +195,23 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 if __name__ == "__main__":
     
     HOST, PORT = "0.0.0.0", 8888
+
+    temporary_mapping_source = [
+            Point(-305,-1433),
+            Point(12058,-4107),
+            Point(15948,13959),
+            Point(2854,16254)
+    ]
+
+    temporary_mapping_target = [
+            Point(0,0),
+            Point(1500,0),
+            Point(1500,2000),
+            Point(0,2000)
+    ]
+
+    h_matrix = homography.from_points(temporary_mapping_source, temporary_mapping_target)
+
 
     MapService()
     SlackService()
