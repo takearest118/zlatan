@@ -151,6 +151,12 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
                 #SlackService().message(str(Session().get_session_list()))
                 # just send back the same data, but upper-cased
                 self.request.sendall(self.data.upper())
+            elif str(self.data, ENCODING).startswith(':/object'):
+                k, v = str(self.data, ENCODING).split('/')[2].split(',', 1)
+                MapService().set_device_id(k, v)
+                self.request.send(bytes(str(MapService().get_map()), ENCODING))
+                self.__logger.debug(MapService().get_map())
+                self.__logger.debug(Session().get_session_list())
             elif str(self.data, ENCODING) == ':/info':
                 self.request.send(bytes(
                     "{},{},{},{},{},{},{}".format(

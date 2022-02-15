@@ -93,7 +93,7 @@ class Npc:
 
 
     def send_position(self):
-        message = ":/device/{},{},{},{},{}".format(
+        message = ":/object/{},{},{},{},{}".format(
                 self.__name,
                 self.__position_x,
                 self.__position_y,
