@@ -26,6 +26,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         except EOFError:
             print("")
             data = ":/quit"
+
+        if data == "":
+            continue
         sock.sendall(bytes(data + '\n', 'utf-8'))
         received = str(sock.recv(1024), 'utf-8')
         print('Sent:     {}'.format(data))
