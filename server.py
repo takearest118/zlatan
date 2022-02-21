@@ -80,6 +80,10 @@ class MapService(metaclass=Singleton):
     def get_map(self):
         return self.__map
 
+    def remove_id(self, _id):
+        with self.__lock:
+            self.__map.pop(_id)
+
 
 class Session(metaclass=Singleton):
 
@@ -169,6 +173,10 @@ class TCPSocketHandler(socketserver.BaseRequestHandler):
                 self.request.send(bytes(str(MapService().get_map()), ENCODING))
                 self.__logger.debug(MapService().get_map())
                 self.__logger.debug(Session().get_session_list())
+            elif str(self.data, ENCODING).startswith(':/remove_object'):
+                target = str(self.data, ENCODING).split('/')[2]
+                MapService().remove_id(target)
+                self.request.send(bytes(str(MapService().get_map()), ENCODING))
             elif str(self.data, ENCODING) == ':/info':
                 self.request.send(bytes(
                     "{},{},{},{},{},{},{}".format(
