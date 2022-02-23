@@ -9,6 +9,8 @@ import logging
 import sys
 import signal
 
+import socketserver
+
 
 DEFAULT_HOST = '192.168.41.254'
 DEFAULT_PORT = 8888
@@ -23,6 +25,7 @@ LOOP_INTERVAL_SEC = 0.01
 
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s\t%(levelname)s:\t%(message)s')
+socketserver.TCPServer.allow_reuse_address = True
 
 
 host = DEFAULT_HOST
@@ -83,7 +86,6 @@ class Npc:
                 self.__SPEED_MAX * LOOP_INTERVAL_SEC * 10)
 
         self.__rotation_z = random.randint(0, 360)
-
 
     def send_message(self, message):
         self.__sock.sendall(bytes(message, ENCODING))
@@ -184,17 +186,153 @@ class NpcService(metaclass=Singleton):
             threading.Thread(target=npc.close).start()
 
 
+class ItemService(metaclass=Singleton):
+    def __init__(self, *args, **kwargs):
+        self.__LOGGER = logging.getLogger('ItemService')
+        self.__LOGGER.info('init ItemService')
+
+        self.__ITEM_MAX = 6
+        self.__item_sequence = 0
+
+        self.__item_list = list()
+
+        received = ""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((host, port))
+            sock.sendall(bytes(":/info", ENCODING))
+            received = str(sock.recv(1024), ENCODING)
+            sock.sendall(bytes(":/quit", ENCODING))
+            str(sock.recv(1024), ENCODING)
+
+        split_info_message = received.split(',')
+        self.__arena_x_min = int(split_info_message[0])
+        self.__arena_x_max = int(split_info_message[1])
+        self.__arena_y_min = int(split_info_message[2])
+        self.__arena_y_max = int(split_info_message[3])
+        self.__arena_z_min = int(split_info_message[4])
+        self.__arena_z_max = int(split_info_message[5])
+        self.__arena_scale = float(split_info_message[6])
+
+        for i in range(0, self.__ITEM_MAX):
+            self.add_item()
+
+
+    def add_item(self):
+        item_name = "item_" + str(self.__item_sequence)
+
+        position_x = random.randint(self.__arena_x_min, self.__arena_x_max)
+        position_y = random.randint(self.__arena_y_min, self.__arena_y_max)
+
+        message = ":/object/{},{},{},0,0".format(item_name, position_x, position_y)
+
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((host, port))
+            sock.sendall(bytes(message, ENCODING))
+            received = str(sock.recv(1024), ENCODING)
+            sock.sendall(bytes(":/quit", ENCODING))
+            received = str(sock.recv(1024), ENCODING)
+
+        self.__item_list.append(item_name)
+        self.__item_sequence = self.__item_sequence + 1
+
+        self.__LOGGER.info("{} is added".format(item_name))
+
+
+    def remove_item(self, item_name):
+
+        message = ":/remove_object/{}".format(item_name)
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((host, port))
+            sock.sendall(bytes(message, ENCODING))
+            received = str(sock.recv(1024), ENCODING)
+            sock.sendall(bytes(":/quit", ENCODING))
+            received = str(sock.recv(1024), ENCODING)
+
+        self.__item_list.remove(item_name)
+        self.__LOGGER.info("{} is removed".format(item_name))
+
+
+    def stop(self):
+        while len(self.__item_list) > 0:
+            item = self.__item_list[0]
+            self.remove_item(item)
+
+
+class TCPSocketHandler(socketserver.BaseRequestHandler):
+    """
+    The RequestHandler class for our server.
+
+    It is instantiated once per connection to the server, and must
+    override the handle() method to implement communication to the
+    client.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.__logger = logging.getLogger('TCPHandler')
+        self.__logger.setLevel(logging.INFO)
+        socketserver.BaseRequestHandler.__init__(self, *args, **kwargs)
+
+
+    def handle(self):
+        while True:
+            self.data = self.request.recv(1024).strip()
+
+            data_string = str(self.data, ENCODING)
+            
+            if str(self.data, ENCODING) == ':/quit':
+                self.request.send(bytes('disconnected', ENCODING))
+                self.__logger.info('{} was gone'.format(self.client_address[0]))
+                break
+            elif data_string.startswith(':/take'):
+                try:
+                    k, v = data_string.split('/')[2].split(',', 1)
+                    self.__logger.info("'{}' tries to take '{}'".format(k, v))
+                    ItemService().remove_item(v)
+                    self.request.send(bytes('OK', ENCODING))
+
+                    ItemService().add_item()
+                except:
+                    self.__logger.info("'{}' fails to take '{}'".format(k, v))
+                    self.request.send(bytes('ERROR', ENCODING))
+            else:
+                self.request.send(bytes('error', ENCODING))
+                self.__logger.warning('{} wrong command'.format(self.client_address[0]))
+                break
+
+
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    pass
+
 
 
 if __name__ == "__main__":
-    def shutdown_handler(sig, frame):
-        NpcService().stop()
 
-    NpcService()
-    NpcService().start()
+    HOST, PORT = "0.0.0.0", 8889
 
-    signal.signal(signal.SIGTERM, shutdown_handler)
-    signal.signal(signal.SIGINT, shutdown_handler)
+    # instantiate the server, and bind to localhost on port 8888
+    with ThreadedTCPServer((HOST, PORT), TCPSocketHandler) as server:
+        # activate the server
+        # this will keep running until Ctrl-C
 
-    signal.pause()
+        def shutdown_handler(sig, frame):
+            NpcService().stop()
+            ItemService().stop()
+            server.shutdown()
+            server.server_close()
+
+
+        NpcService()
+        NpcService().start()
+        ItemService()
+
+        signal.signal(signal.SIGTERM, shutdown_handler)
+        signal.signal(signal.SIGINT, shutdown_handler)
+
+        server_thread = threading.Thread(target=server.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+
+        signal.pause()
 
