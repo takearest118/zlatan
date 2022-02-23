@@ -82,8 +82,8 @@ class Npc:
         self.__position_y = random.randint(self.__arena_y_min, self.__arena_y_max)
         self.__position_z = 0
         self.__speed = random.randint(
-                self.__SPEED_MIN * LOOP_INTERVAL_SEC * 10, 
-                self.__SPEED_MAX * LOOP_INTERVAL_SEC * 10)
+                self.__SPEED_MIN * LOOP_INTERVAL_SEC, 
+                self.__SPEED_MAX * LOOP_INTERVAL_SEC)
 
         self.__rotation_z = random.randint(0, 360)
 
